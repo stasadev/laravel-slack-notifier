@@ -117,7 +117,7 @@ class SendToSlack extends Notification
 
             NotificationFacade::route('slack', $this->to)->notify($this);
         } catch (Throwable $e) {
-            throw WebhookSendFail::make($e);
+            report(WebhookSendFail::make($e));
         }
     }
 
