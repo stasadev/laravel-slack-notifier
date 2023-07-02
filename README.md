@@ -61,11 +61,22 @@ public function register(): void
     });
 }
 
-// In Laravel 5.7.x, 5.8.x, 6.x, 7.x
+// In Laravel 7.x
 // app/Exceptions/Handler.php
 public function report(Throwable $exception)
 {
-    if ($this->shouldReport($exception) {
+    if ($this->shouldReport($exception)) {
+        \Stasadev\SlackNotifier\Facades\SlackNotifier::send($exception);
+    }
+
+    parent::report($exception);
+}
+
+// In Laravel 5.7.x, 5.8.x, 6.x
+// app/Exceptions/Handler.php
+public function report(Exception $exception)
+{
+    if ($this->shouldReport($exception)) {
         \Stasadev\SlackNotifier\Facades\SlackNotifier::send($exception);
     }
 
