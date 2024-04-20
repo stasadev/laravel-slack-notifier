@@ -19,7 +19,7 @@
     "require": {
         "php": "^7.1.3 || ^8.0",
         "ext-json": "*",
-        "laravel/slack-notification-channel": "^1.0 || ^2.0",
+        "laravel/slack-notification-channel": "^1.0 || ^2.0 || ^3.0",
         "monolog/monolog": "^1.12 || ^2.0 || ^3.0",
         "symfony/polyfill-php80": "^1.20"
     },
