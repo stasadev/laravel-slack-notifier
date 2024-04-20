@@ -32,7 +32,6 @@ LOG_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/ABC
 LOG_SLACK_CHANNEL=
 LOG_SLACK_EMOJI=:boom:
 LOG_SLACK_CACHE_SECONDS=0
-CACHE_DRIVER=file
 ```
 
 How to get a webhook URL [in the Slack API docs](https://api.slack.com/messaging/webhooks).
@@ -52,7 +51,16 @@ To send a message to Slack, simply call `SlackNotifier::send()`.
 ## Report Exception
 
 ```php
-// In Laravel 8.x and later
+// In Laravel 11.x and later
+// bootstrap/app.php
+return Application::configure(basePath: dirname(__DIR__))
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->reportable(function (Throwable $e) {
+            \Stasadev\SlackNotifier\Facades\SlackNotifier::send($e);
+        });
+    })->create();
+
+// In Laravel 8.x, 9.x, 10.x
 // app/Exceptions/Handler.php
 public function register(): void
 {
@@ -170,7 +178,7 @@ You can filter it out with the `dont_trace` config option.
 
 Sometimes a large group of exceptions is thrown, and you don't want to log each of them because they are the same.
 
-Use `LOG_SLACK_CACHE_SECONDS` (uses Laravel `CACHE_DRIVER` under the hood) to suppress output for X seconds, or pass it to the `cacheSeconds` function.
+Use `LOG_SLACK_CACHE_SECONDS` (uses Laravel cache under the hood) to suppress output for X seconds, or pass it to the `cacheSeconds` function.
 
 ```php
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
