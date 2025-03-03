@@ -2,6 +2,15 @@
 
 All notable changes to `laravel-slack-notifier` will be documented in this file.
 
+## 1.1.1 - 2025-03-03
+
+### What's Changed
+
+* Bump aglipanci/laravel-pint-action from 2.4 to 2.5 by @dependabot in https://github.com/stasadev/laravel-slack-notifier/pull/8
+* Apply latest Pint rules by @stasadev in https://github.com/stasadev/laravel-slack-notifier/pull/9
+
+**Full Changelog**: https://github.com/stasadev/laravel-slack-notifier/compare/1.1.0...1.1.1
+
 ## 1.1.0 Laravel 11 - 2024-04-20
 
 ### What's Changed
