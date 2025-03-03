@@ -39,8 +39,8 @@ class SlackNotifierFormatter
 
     public function __construct()
     {
-        $this->message = new SlackMessage();
-        $this->normalizer = new NormalizerFormatter();
+        $this->message = new SlackMessage;
+        $this->normalizer = new NormalizerFormatter;
 
         $this->context = config('slack-notifier.context', [
             'get', 'post', 'cookie', 'session',
