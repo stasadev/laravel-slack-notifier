@@ -48,7 +48,7 @@ it('can send a notification with an array to slack using the default webhook url
 it('can send a notification with an object to slack using the default webhook url', function () {
     config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-    SlackNotifier::send(new stdClass());
+    SlackNotifier::send(new stdClass);
 
     Notification::assertSentTimes(SendToSlack::class, 1);
 });
