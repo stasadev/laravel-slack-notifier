@@ -1,11 +1,9 @@
-[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct-single.svg)](https://stand-with-ukraine.pp.ua)
-
-# Laravel Slack Notifier
-
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/stasadev/laravel-slack-notifier.svg?style=flat-square)](https://packagist.org/packages/stasadev/laravel-slack-notifier)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/stasadev/laravel-slack-notifier/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/stasadev/laravel-slack-notifier/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/stasadev/laravel-slack-notifier/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/stasadev/laravel-slack-notifier/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/stasadev/laravel-slack-notifier.svg?style=flat-square)](https://packagist.org/packages/stasadev/laravel-slack-notifier)
+
+# Laravel Slack Notifier
 
 Send exceptions and dump variables to Slack.
 
