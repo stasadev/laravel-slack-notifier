@@ -5,6 +5,7 @@ namespace Stasadev\SlackNotifier;
 use Illuminate\Notifications\Messages\SlackAttachment;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Context;
 use Monolog\Formatter\NormalizerFormatter;
 use ReflectionMethod;
 use Stasadev\SlackNotifier\Notifications\SendToSlack;
@@ -201,32 +202,35 @@ class SlackNotifierFormatter
 
     protected function getContext(): ?string
     {
-        if (app()->runningInConsole()) {
-            return null;
-        }
-
         $context = [];
+        $runningInConsole = app()->runningInConsole();
 
-        foreach ($this->context as $item) {
+        foreach ($this->context ?? [] as $item) {
             $value = null;
             $format = '$_%s = %s';
 
-            if ($item === 'get') {
-                $value = request()->query();
-            } elseif ($item === 'post') {
-                $value = request()->post();
-            } elseif ($item === 'request') {
-                $value = request()->all();
-            } elseif ($item === 'headers') {
-                $value = request()->headers->all();
-            } elseif ($item === 'files') {
-                $value = request()->allFiles();
-            } elseif ($item === 'cookie') {
-                $value = request()->cookie();
-            } elseif ($item === 'session' && request()->hasSession()) {
-                $value = request()->session()->all();
-            } elseif ($item === 'server') {
-                $value = request()->server();
+            if ($item === 'context') {
+                if (class_exists(Context::class)) {
+                    $value = Context::all();
+                }
+            } elseif (! $runningInConsole) {
+                if ($item === 'get') {
+                    $value = request()->query();
+                } elseif ($item === 'post') {
+                    $value = request()->post();
+                } elseif ($item === 'request') {
+                    $value = request()->all();
+                } elseif ($item === 'headers') {
+                    $value = request()->headers->all();
+                } elseif ($item === 'files') {
+                    $value = request()->allFiles();
+                } elseif ($item === 'cookie') {
+                    $value = request()->cookie();
+                } elseif ($item === 'session' && request()->hasSession()) {
+                    $value = request()->session()->all();
+                } elseif ($item === 'server') {
+                    $value = request()->server();
+                }
             }
 
             if (is_array($value) && ($value = Arr::except($value, $this->dontFlash))) {
@@ -238,6 +242,6 @@ class SlackNotifierFormatter
             }
         }
 
-        return implode("\n", $context);
+        return $context ? implode("\n", $context) : null;
     }
 }
