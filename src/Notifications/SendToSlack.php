@@ -119,6 +119,11 @@ class SendToSlack extends Notification
         // Resolve only the webhook URL that is used, so an invalid one does not affect the others.
         $url = Config::getWebhookUrl($this->to);
 
+        // An empty webhook URL disables sending, so skip building the message and caching the exception.
+        if (! $url) {
+            return;
+        }
+
         try {
             NotificationFacade::route('slack', $url)->notify($this);
         } catch (Throwable $e) {
