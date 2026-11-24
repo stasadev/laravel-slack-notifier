@@ -7,6 +7,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
 use Stasadev\SlackNotifier\Tests\Support\CustomFormatter;
+use Stasadev\SlackNotifier\Tests\Support\UnserializableValue;
 use stdClass;
 
 class FormatterTest extends TestCase
@@ -58,6 +59,19 @@ class FormatterTest extends TestCase
 
         $this->assertStringContainsString('stdClass', $content);
         $this->assertStringContainsString('John', $content);
+    }
+
+    public function test_it_sends_a_value_that_cannot_be_normalized(): void
+    {
+        SlackNotifier::send(new UnserializableValue);
+
+        $message = $this->getSentMessage();
+
+        $this->assertSame('success', $message->level);
+        $this->assertSame(
+            '```Failed to normalize '.UnserializableValue::class.': RuntimeException: Cannot serialize this value.```',
+            $message->attachments[0]->content
+        );
     }
 
     public function test_it_formats_an_exception(): void

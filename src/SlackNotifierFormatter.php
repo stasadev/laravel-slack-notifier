@@ -154,25 +154,27 @@ class SlackNotifierFormatter
 
     protected function normalizeToString($variable): string
     {
-        $variable = $this->normalize($variable);
-
         try {
-            if (is_null($variable)) {
-                $string = 'null';
-            } elseif (is_bool($variable)) {
-                $string = $variable ? 'true' : 'false';
-            } elseif (is_array($variable)) {
-                $string = print_r($variable, true);
-            } elseif (is_object($variable)) {
-                $string = json_encode($variable);
-            } else {
-                $string = (string) $variable;
-            }
+            // Monolog normalizes objects to arrays or strings, so only scalars, null and arrays are left.
+            $variable = $this->normalize($variable);
         } catch (Throwable $e) {
-            $string = 'Failed to normalize variable.';
+            // For example, an object whose jsonSerialize() throws.
+            return sprintf('Failed to normalize %s: %s: %s', get_debug_type($variable), get_class($e), $e->getMessage());
         }
 
-        return $string;
+        if (is_null($variable)) {
+            return 'null';
+        }
+
+        if (is_bool($variable)) {
+            return $variable ? 'true' : 'false';
+        }
+
+        if (is_array($variable)) {
+            return print_r($variable, true);
+        }
+
+        return (string) $variable;
     }
 
     protected function normalizeTrace(Throwable $exception): string
