@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Str;
 use Stasadev\SlackNotifier\Config;
+use Stasadev\SlackNotifier\Exceptions\SlackNotifierException;
 use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
 use Stasadev\SlackNotifier\SlackNotifierFormatter;
 use Throwable;
@@ -62,11 +63,9 @@ class SendToSlack extends Notification
     {
         $this->to('default')
             ->channel(config('slack-notifier.channel', ''))
-            ->username(config('slack-notifier.username', 'Laravel Log'))
-            ->emoji(config('slack-notifier.emoji', ':boom:'))
+            ->username((string) config('slack-notifier.username', 'Laravel Log'))
+            ->emoji((string) config('slack-notifier.emoji', ':boom:'))
             ->cacheSeconds((int) config('slack-notifier.cache_seconds', 0));
-
-        $this->formatter = Config::getFormatter();
     }
 
     public function to(string $to): self
@@ -112,10 +111,22 @@ class SendToSlack extends Notification
             $this->variable = $message;
         }
 
-        if ($this->exception instanceof WebhookSendFail) {
+        // The package reports its own exceptions, so sending them to Slack could loop.
+        if ($this->exception instanceof SlackNotifierException) {
             return;
         }
 
+        try {
+            $this->sendToSlack();
+        } catch (Throwable $e) {
+            // send() usually runs while Laravel reports an exception, and an exception thrown here
+            // would stop Laravel from logging that exception, so report the error instead.
+            report($e instanceof SlackNotifierException ? $e : WebhookSendFail::make($e));
+        }
+    }
+
+    protected function sendToSlack(): void
+    {
         // Resolve only the webhook URL that is used, so an invalid one does not affect the others.
         $url = Config::getWebhookUrl($this->to);
 
@@ -123,6 +134,8 @@ class SendToSlack extends Notification
         if (! $url) {
             return;
         }
+
+        $this->formatter = Config::getFormatter();
 
         $cacheKey = $this->getCacheKey();
 
@@ -140,7 +153,7 @@ class SendToSlack extends Notification
                 cache()->forget($cacheKey);
             }
 
-            report(WebhookSendFail::make($e));
+            throw $e;
         }
     }
 

@@ -4,7 +4,7 @@ namespace Stasadev\SlackNotifier\Exceptions;
 
 use RuntimeException;
 
-class WebhookUrlDoesNotExist extends RuntimeException
+class WebhookUrlDoesNotExist extends RuntimeException implements SlackNotifierException
 {
     public static function make(string $name): self
     {
