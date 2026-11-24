@@ -167,6 +167,8 @@ Extend the default `Stasadev\SlackNotifier\SlackNotifierFormatter::class` to for
 
 Include additional `context` in a Slack message (use `dont_flash` to exclude sensitive info from `context`). It will be added as an attachment.
 
+Add `'context'` to the `context` option to include data from the Laravel [Context](https://laravel.com/docs/context) facade (Laravel 11+). Hidden context data is never included. Unlike request data, it is also included when running in the console.
+
 ### Exception stack trace filtering
 
 Stack traces for exceptions in Laravel usually contain many lines, including framework files. Usually, you are only interested in tracking exception details in the application files.

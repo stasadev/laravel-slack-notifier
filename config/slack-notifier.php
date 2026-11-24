@@ -38,7 +38,7 @@ return [
 
     /*
      * Add context for the Slack message. Possible values:
-     * 'get', 'post', 'request', 'headers', 'files', 'cookie', 'session', 'server'
+     * 'get', 'post', 'request', 'headers', 'files', 'cookie', 'session', 'server', 'context'
      */
     'context' => [
         'get',
