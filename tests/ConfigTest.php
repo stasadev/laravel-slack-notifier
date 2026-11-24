@@ -1,20 +1,38 @@
 <?php
 
+namespace Stasadev\SlackNotifier\Tests;
+
+use PHPUnit\Framework\Attributes\DataProvider;
 use Stasadev\SlackNotifier\Config;
 
-beforeEach(function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
-});
+class ConfigTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-it('can get a webhook url', function (string $name, string $result) {
-    $url = Config::getWebhookUrl($name);
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+    }
 
-    $this->assertSame($url, $result);
-})->with([
-    ['default', 'https://default-domain.com'],
-    ['https://custom-domain.com', 'https://custom-domain.com'],
-]);
+    public static function webhookUrlProvider(): array
+    {
+        return [
+            ['default', 'https://default-domain.com'],
+            ['https://custom-domain.com', 'https://custom-domain.com'],
+        ];
+    }
 
-it('cannot get a webhook url for an unknown config name', function () {
-    expect(Config::getWebhookUrl('non-existing'))->toBeNull();
-});
+    /**
+     * @dataProvider webhookUrlProvider
+     */
+    #[DataProvider('webhookUrlProvider')]
+    public function test_it_can_get_a_webhook_url(string $name, string $result): void
+    {
+        $this->assertSame($result, Config::getWebhookUrl($name));
+    }
+
+    public function test_it_cannot_get_a_webhook_url_for_an_unknown_config_name(): void
+    {
+        $this->assertNull(Config::getWebhookUrl('non-existing'));
+    }
+}

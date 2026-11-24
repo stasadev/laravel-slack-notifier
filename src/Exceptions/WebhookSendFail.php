@@ -5,7 +5,7 @@ namespace Stasadev\SlackNotifier\Exceptions;
 use RuntimeException;
 use Throwable;
 
-class WebhookSendFail extends RunTimeException
+class WebhookSendFail extends RuntimeException
 {
     public static function make(Throwable $exception): self
     {

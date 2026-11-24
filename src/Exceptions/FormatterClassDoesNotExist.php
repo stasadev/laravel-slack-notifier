@@ -4,7 +4,7 @@ namespace Stasadev\SlackNotifier\Exceptions;
 
 use RuntimeException;
 
-class FormatterClassDoesNotExist extends RunTimeException
+class FormatterClassDoesNotExist extends RuntimeException
 {
     public static function make(?string $name): self
     {

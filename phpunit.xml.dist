@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Keep this file valid for every supported PHPUnit version (7.5 to 13).
+    Attributes or elements added in later versions make older versions print
+    a configuration warning, so use command line options for those instead.
+-->
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.2/phpunit.xsd"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
     backupGlobals="false"
     bootstrap="vendor/autoload.php"
     colors="true"
@@ -10,29 +15,11 @@
     executionOrder="random"
     failOnWarning="true"
     failOnRisky="true"
-    failOnEmptyTestSuite="true"
     beStrictAboutOutputDuringTests="true"
-    cacheDirectory=".phpunit.cache"
-    backupStaticProperties="false"
 >
   <testsuites>
     <testsuite name="Stasadev Test Suite">
       <directory>tests</directory>
     </testsuite>
   </testsuites>
-  <coverage>
-    <report>
-      <html outputDirectory="build/coverage"/>
-      <text outputFile="build/coverage.txt"/>
-      <clover outputFile="build/logs/clover.xml"/>
-    </report>
-  </coverage>
-  <logging>
-    <junit outputFile="build/report.junit.xml"/>
-  </logging>
-  <source>
-    <include>
-      <directory suffix=".php">./src</directory>
-    </include>
-  </source>
 </phpunit>

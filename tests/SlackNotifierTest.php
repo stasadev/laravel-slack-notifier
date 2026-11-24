@@ -1,119 +1,145 @@
 <?php
 
+namespace Stasadev\SlackNotifier\Tests;
+
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
-use Stasadev\SlackNotifier\Notifications\SendToSlack;
+use stdClass;
 
-beforeEach(function () {
-    Notification::fake();
-});
+class SlackNotifierTest extends TestCase
+{
+    public function test_it_can_send_a_notification_with_an_exception_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with an exception to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send(new RuntimeException('test-exception'));
 
-    SlackNotifier::send(new RuntimeException('test-exception'));
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_cannot_send_a_notification_with_its_fail_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('cannot send a notification with its fail to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send(WebhookSendFail::make(new RuntimeException('webhook is failed')));
 
-    SlackNotifier::send(WebhookSendFail::make(new RuntimeException('webhook is failed')));
+        Notification::assertNothingSent();
+    }
 
-    Notification::assertNothingSent();
-});
+    public function test_it_can_send_a_notification_with_a_message_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with a message to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send('test-data');
 
-    SlackNotifier::send('test-data');
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_an_array_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with an array to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send([
+            'test-key' => 'test-data',
+        ]);
 
-    SlackNotifier::send([
-        'test-key' => 'test-data',
-    ]);
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_an_object_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with an object to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send(new stdClass);
 
-    SlackNotifier::send(new stdClass);
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_null_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with null to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send(null);
 
-    SlackNotifier::send(null);
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_boolean_to_slack_using_the_default_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with boolean to slack using the default webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::send(true);
 
-    SlackNotifier::send(true);
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_a_message_to_slack_using_an_alternative_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.testing', 'https://default-domain.com');
 
-it('can send a notification with a message to slack using an alternative webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.testing', 'https://default-domain.com');
+        SlackNotifier::to('testing')->send('test-data');
 
-    SlackNotifier::to('testing')->send('test-data');
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_can_send_a_notification_with_a_message_to_slack_alternative_channel(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
 
-it('can send a notification with a message to slack alternative channel', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::channel('random')->send('test-data');
 
-    SlackNotifier::channel('random')->send('test-data');
+        $this->assertSlackNotificationsSent(1);
+    }
 
-    Notification::assertSentTimes(SendToSlack::class, 1);
-});
+    public function test_it_will_throw_an_exception_for_a_non_existing_formatter_class(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        config()->set('slack-notifier.formatter', 'non-existing-job');
 
-it('will throw an exception for a non-existing formatter class', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
-    config()->set('slack-notifier.formatter', 'non-existing-job');
+        $this->expectException(FormatterClassDoesNotExist::class);
 
-    SlackNotifier::send('test-data');
-})->throws(FormatterClassDoesNotExist::class);
+        SlackNotifier::send('test-data');
+    }
 
-it('will not throw an exception for an empty webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', '');
+    public function test_it_will_not_throw_an_exception_for_an_empty_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', '');
 
-    SlackNotifier::send('test-data');
-})->expectNotToPerformAssertions();
+        $this->expectNotToPerformAssertions();
 
-it('will throw an exception for an invalid webhook url', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'not-an-url');
+        SlackNotifier::send('test-data');
+    }
 
-    SlackNotifier::send('test-data');
-})->throws(WebhookUrlNotValid::class);
+    public function test_it_will_throw_an_exception_for_an_invalid_webhook_url(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'not-an-url');
 
-it('will throw an exception for an invalid formatter class', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
-    config()->set('slack-notifier.formatter', '');
+        $this->expectException(WebhookUrlNotValid::class);
 
-    SlackNotifier::send('test-data');
-})->throws(FormatterClassDoesNotExist::class);
+        SlackNotifier::send('test-data');
+    }
 
-it('will throw an exception for a missing formatter class', function () {
-    config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
-    config()->set('slack-notifier.formatter', null);
+    public function test_it_will_throw_an_exception_for_an_invalid_formatter_class(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        config()->set('slack-notifier.formatter', '');
 
-    SlackNotifier::send('test-data');
-})->throws(FormatterClassDoesNotExist::class);
+        $this->expectException(FormatterClassDoesNotExist::class);
+
+        SlackNotifier::send('test-data');
+    }
+
+    public function test_it_will_throw_an_exception_for_a_missing_formatter_class(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        config()->set('slack-notifier.formatter', null);
+
+        $this->expectException(FormatterClassDoesNotExist::class);
+
+        SlackNotifier::send('test-data');
+    }
+}

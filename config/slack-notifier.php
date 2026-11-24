@@ -1,5 +1,7 @@
 <?php
 
+use Stasadev\SlackNotifier\SlackNotifierFormatter;
+
 return [
     /*
      * Slack incoming webhook URLs.
@@ -32,7 +34,7 @@ return [
     /*
      * A formatter for Slack message.
      */
-    'formatter' => Stasadev\SlackNotifier\SlackNotifierFormatter::class,
+    'formatter' => SlackNotifierFormatter::class,
 
     /*
      * Add context for the Slack message. Possible values:

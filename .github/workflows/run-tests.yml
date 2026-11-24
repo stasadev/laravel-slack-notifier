@@ -5,22 +5,70 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        php: [8.3]
-        laravel: [11.*]
-        stability: [prefer-stable]
+        # One entry per PHP and Laravel pair. Composer picks the matching
+        # orchestra/testbench and phpunit/phpunit from the require-dev constraints.
         include:
-          - laravel: 11.*
-            testbench: ^9.0
+          - { php: '7.1', laravel: '5.7.*' }
+          - { php: '7.2', laravel: '5.7.*' }
+          - { php: '7.3', laravel: '5.7.*' }
 
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
+          - { php: '7.1', laravel: '5.8.*' }
+          - { php: '7.2', laravel: '5.8.*' }
+          - { php: '7.3', laravel: '5.8.*' }
+          - { php: '7.4', laravel: '5.8.*' }
+
+          - { php: '7.2', laravel: '6.*' }
+          - { php: '7.3', laravel: '6.*' }
+          - { php: '7.4', laravel: '6.*' }
+          - { php: '8.0', laravel: '6.*' }
+
+          - { php: '7.2', laravel: '7.*' }
+          - { php: '7.3', laravel: '7.*' }
+          - { php: '7.4', laravel: '7.*' }
+          - { php: '8.0', laravel: '7.*' }
+
+          - { php: '7.3', laravel: '8.*' }
+          - { php: '7.4', laravel: '8.*' }
+          - { php: '8.0', laravel: '8.*' }
+          - { php: '8.1', laravel: '8.*' }
+
+          - { php: '8.0', laravel: '9.*' }
+          - { php: '8.1', laravel: '9.*' }
+          - { php: '8.2', laravel: '9.*' }
+
+          - { php: '8.1', laravel: '10.*' }
+          - { php: '8.2', laravel: '10.*' }
+          - { php: '8.3', laravel: '10.*' }
+
+          - { php: '8.2', laravel: '11.*' }
+          - { php: '8.3', laravel: '11.*' }
+          - { php: '8.4', laravel: '11.*' }
+
+          - { php: '8.2', laravel: '12.*' }
+          - { php: '8.3', laravel: '12.*' }
+          - { php: '8.4', laravel: '12.*' }
+          - { php: '8.5', laravel: '12.*' }
+          - { php: '8.6', laravel: '12.*' }
+
+          - { php: '8.3', laravel: '13.*' }
+          - { php: '8.4', laravel: '13.*' }
+          - { php: '8.5', laravel: '13.*' }
+          - { php: '8.6', laravel: '13.*' }
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }}
+
+    env:
+      # Old Laravel versions have known security advisories, and Composer
+      # refuses to install them by default. That is fine for running tests.
+      COMPOSER_NO_BLOCKING: 1
 
     steps:
       - name: Checkout code
@@ -40,11 +88,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+          # Carbon 1 (Laravel 5.7) ships this Composer plugin, which only prints an upgrade notice.
+          composer config allow-plugins.kylekatarnls/update-helper false
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
 
-      - name: List Installed Dependencies
+      - name: List installed dependencies
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest --ci
+        run: vendor/bin/phpunit

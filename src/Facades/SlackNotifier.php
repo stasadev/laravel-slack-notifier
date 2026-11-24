@@ -3,6 +3,7 @@
 namespace Stasadev\SlackNotifier\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use Stasadev\SlackNotifier\Notifications\SendToSlack;
 
 /**
  * @method static self to(string $to)
@@ -12,12 +13,12 @@ use Illuminate\Support\Facades\Facade;
  * @method static self cacheSeconds(int $cacheSeconds)
  * @method static void send($message)
  *
- * @see \Stasadev\SlackNotifier\Notifications\SendToSlack
+ * @see SendToSlack
  */
 class SlackNotifier extends Facade
 {
     protected static function getFacadeAccessor()
     {
-        return \Stasadev\SlackNotifier\Notifications\SendToSlack::class;
+        return SendToSlack::class;
     }
 }
