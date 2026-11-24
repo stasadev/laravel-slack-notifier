@@ -12,6 +12,7 @@ use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
+use Stasadev\SlackNotifier\Notifications\SendToSlack;
 use stdClass;
 use Throwable;
 
@@ -265,6 +266,68 @@ class SlackNotifierTest extends TestCase
 
         $this->assertSame('https://default-domain.com', $this->getSentUrl(1));
         $this->assertNull($this->getSentMessage(1)->channel);
+    }
+
+    public function test_it_sends_a_value_after_an_exception_with_the_same_notification(): void
+    {
+        $notification = SlackNotifier::channel('#random');
+
+        $notification->send(new RuntimeException('test-exception'));
+        $notification->send('test-data');
+
+        $message = $this->getSentMessage(1);
+
+        $this->assertSame('success', $message->level);
+        $this->assertSame('```test-data```', $message->attachments[0]->content);
+        $this->assertStringNotContainsString('test-exception', $this->getSentContents(1));
+        $this->assertSame('#random', $message->channel);
+    }
+
+    public function test_it_sends_an_exception_after_a_value_with_the_same_notification(): void
+    {
+        $notification = SlackNotifier::channel('#random');
+
+        $notification->send('test-data');
+        $notification->send(new RuntimeException('test-exception'));
+
+        $message = $this->getSentMessage(1);
+
+        $this->assertSame('error', $message->level);
+        $this->assertStringContainsString('RuntimeException: test-exception', $message->attachments[0]->content);
+        $this->assertStringNotContainsString('test-data', $this->getSentContents(1));
+    }
+
+    public function test_it_sends_only_the_attachments_of_each_message_with_the_same_notification(): void
+    {
+        $notification = SlackNotifier::channel('#random');
+
+        $notification->send('first-value');
+        $notification->send('second-value');
+
+        $this->assertSame('```second-value```', $this->getSentMessage(1)->attachments[0]->content);
+        $this->assertStringNotContainsString('first-value', $this->getSentContents(1));
+    }
+
+    public function test_it_sends_with_a_notification_resolved_from_the_container(): void
+    {
+        $notification = $this->app->make(SendToSlack::class);
+
+        $notification->send('first-value');
+        $notification->send('second-value');
+
+        $this->assertSlackMessagesSent(2);
+        $this->assertSame('```second-value```', $this->getSentMessage(1)->attachments[0]->content);
+        $this->assertStringNotContainsString('first-value', $this->getSentContents(1));
+    }
+
+    /**
+     * Get the content of all attachments of a sent message.
+     */
+    protected function getSentContents(int $index): string
+    {
+        return implode("\n", array_map(function ($attachment) {
+            return (string) $attachment->content;
+        }, $this->getSentMessage($index)->attachments));
     }
 
     public function test_it_can_be_mocked_in_application_tests(): void

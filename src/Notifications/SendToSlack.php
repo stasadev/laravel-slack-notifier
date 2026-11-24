@@ -105,9 +105,12 @@ class SendToSlack extends Notification
 
     public function send($message): void
     {
+        // A notification can be reused, so build every message from scratch.
         if ($message instanceof Throwable) {
             $this->exception = $message;
+            $this->variable = null;
         } else {
+            $this->exception = null;
             $this->variable = $message;
         }
 
