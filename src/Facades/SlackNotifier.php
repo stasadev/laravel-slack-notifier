@@ -25,7 +25,7 @@ class SlackNotifier extends Facade
     /**
      * Resolve a new notification for every call.
      *
-     * A notification keeps its options and builds its message in place,
+     * A notification keeps its options, like to() and channel(),
      * so reusing one would carry them over to the next message.
      */
     protected static function resolveFacadeInstance($name)
