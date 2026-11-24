@@ -179,6 +179,24 @@ class SlackNotifierTest extends TestCase
         $this->assertSlackMessagesSent(3);
     }
 
+    public function test_it_does_not_suppress_an_exception_that_failed_to_send(): void
+    {
+        $handler = Mockery::mock(ExceptionHandler::class);
+        $handler->shouldReceive('report')->once()->with(Mockery::type(WebhookSendFail::class));
+        $this->app->instance(ExceptionHandler::class, $handler);
+
+        $exception = new RuntimeException('test-exception');
+
+        $this->slack->failWith = new RuntimeException('Slack is down');
+        SlackNotifier::cacheSeconds(60)->send($exception);
+
+        $this->slack->failWith = null;
+        SlackNotifier::cacheSeconds(60)->send($exception);
+        SlackNotifier::cacheSeconds(60)->send($exception);
+
+        $this->assertSlackMessagesSent(1);
+    }
+
     public function test_it_does_not_suppress_values_with_cache_seconds(): void
     {
         foreach ([1, 2, 3] as $attempt) {

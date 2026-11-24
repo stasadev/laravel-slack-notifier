@@ -124,16 +124,29 @@ class SendToSlack extends Notification
             return;
         }
 
+        $cacheKey = $this->getCacheKey();
+
+        // Cache::add() only stores the key if it is missing, so the same exception is also not sent twice at the same time.
+        // Use a date, as Laravel 5.7 reads a number as minutes.
+        if ($cacheKey && ! cache()->add($cacheKey, true, now()->addSeconds($this->cacheSeconds))) {
+            return;
+        }
+
         try {
             NotificationFacade::route('slack', $url)->notify($this);
         } catch (Throwable $e) {
+            // Do not suppress an exception that did not reach Slack.
+            if ($cacheKey) {
+                cache()->forget($cacheKey);
+            }
+
             report(WebhookSendFail::make($e));
         }
     }
 
     public function via($notifiable): array
     {
-        return $this->cached() ? [] : ['slack'];
+        return ['slack'];
     }
 
     public function toSlack($notifiable): SlackMessage
@@ -154,28 +167,17 @@ class SendToSlack extends Notification
         return $this->variable;
     }
 
-    protected function cached(): bool
+    /**
+     * Get the key that suppresses the same exception for the cache seconds.
+     */
+    protected function getCacheKey(): ?string
     {
-        // don't cache unless there are exceptions
-        if (! $this->exception) {
-            return false;
+        // Only exceptions are suppressed.
+        if (! $this->exception || $this->cacheSeconds < 1) {
+            return null;
         }
 
-        $seconds = $this->cacheSeconds;
-
-        if ($seconds < 1) {
-            return false;
-        }
-
-        $key = Str::kebab($this->username.' Slack Log Message')
+        return Str::kebab($this->username.' Slack Log Message')
             .'-'.sha1($this->exception);
-
-        if (cache()->get($key)) {
-            return true;
-        }
-
-        cache()->set($key, true, $seconds);
-
-        return false;
     }
 }
