@@ -69,14 +69,30 @@ class SlackNotifierTest extends TestCase
         $this->assertSame('https://testing-domain.com', $this->getSentUrl(1));
     }
 
-    public function test_it_passes_no_webhook_url_when_the_webhook_url_is_empty(): void
+    public function test_it_does_not_send_without_a_webhook_url(): void
     {
+        foreach (['', null] as $url) {
+            config()->set('slack-notifier.webhook_urls.default', $url);
+
+            SlackNotifier::send('test-data');
+            SlackNotifier::send(new RuntimeException('test-exception'));
+        }
+
+        $this->assertSlackMessagesSent(0);
+    }
+
+    public function test_it_does_not_suppress_an_exception_that_was_not_sent_without_a_webhook_url(): void
+    {
+        $exception = new RuntimeException('test-exception');
+
         config()->set('slack-notifier.webhook_urls.default', '');
+        SlackNotifier::cacheSeconds(60)->send($exception);
 
-        SlackNotifier::send('test-data');
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
+        SlackNotifier::cacheSeconds(60)->send($exception);
 
-        // The Slack webhook channel does not post anything without a URL.
-        $this->assertNull($this->getSentUrl());
+        $this->assertSlackMessagesSent(1);
+        $this->assertSame('https://default-domain.com', $this->getSentUrl());
     }
 
     public function test_it_uses_the_channel_username_and_emoji_from_config(): void
