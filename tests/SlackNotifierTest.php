@@ -2,7 +2,9 @@
 
 namespace Stasadev\SlackNotifier\Tests;
 
+use DateTimeInterface;
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -13,6 +15,7 @@ use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
 use Stasadev\SlackNotifier\Notifications\SendToSlack;
+use Stasadev\SlackNotifier\Tests\Support\ThrowingFormatter;
 use stdClass;
 use Throwable;
 
@@ -232,6 +235,46 @@ class SlackNotifierTest extends TestCase
         }
 
         $this->assertSlackMessagesSent(3);
+    }
+
+    public function test_it_stores_the_cache_key_for_the_cache_seconds(): void
+    {
+        $now = Carbon::now();
+        Carbon::setTestNow($now);
+
+        $arguments = null;
+
+        Cache::shouldReceive('add')->once()->andReturnUsing(function (...$args) use (&$arguments) {
+            $arguments = $args;
+
+            return true;
+        });
+
+        try {
+            SlackNotifier::username('Test Bot')->cacheSeconds(90)->send(new RuntimeException('test-exception'));
+        } finally {
+            Carbon::setTestNow();
+        }
+
+        $this->assertSlackMessagesSent(1);
+        $this->assertStringStartsWith('test-bot-slack-log-message-', $arguments[0]);
+        // A date, as Laravel 5.7 reads a number as minutes.
+        $this->assertInstanceOf(DateTimeInterface::class, $arguments[2]);
+        $this->assertSame($now->getTimestamp() + 90, $arguments[2]->getTimestamp());
+    }
+
+    public function test_it_reports_a_webhook_send_fail_exception_when_the_formatter_fails(): void
+    {
+        $this->recordReportedExceptions();
+
+        config()->set('slack-notifier.formatter', ThrowingFormatter::class);
+
+        SlackNotifier::send('test-data');
+
+        $this->assertSlackMessagesSent(0);
+        $this->assertCount(1, $this->reported);
+        $this->assertInstanceOf(WebhookSendFail::class, $this->reported[0]);
+        $this->assertSame('RuntimeException: Cannot format this message.', $this->reported[0]->getMessage());
     }
 
     public function test_it_sends_a_value_after_an_exception(): void
