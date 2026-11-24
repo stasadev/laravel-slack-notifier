@@ -7,6 +7,7 @@ use Mockery;
 use RuntimeException;
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
+use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
 use stdClass;
@@ -256,6 +257,13 @@ class SlackNotifierTest extends TestCase
         $this->expectException(FormatterClassDoesNotExist::class);
 
         SlackNotifier::send('test-data');
+    }
+
+    public function test_it_will_throw_an_exception_for_an_unknown_webhook_name(): void
+    {
+        $this->expectException(WebhookUrlDoesNotExist::class);
+
+        SlackNotifier::to('non-existing')->send('test-data');
     }
 
     public function test_it_will_throw_an_exception_for_an_invalid_webhook_url(): void

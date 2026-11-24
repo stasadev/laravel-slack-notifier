@@ -3,6 +3,7 @@
 namespace Stasadev\SlackNotifier;
 
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
+use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 
 class Config
@@ -24,7 +25,14 @@ class Config
             return $name;
         }
 
-        $url = config("slack-notifier.webhook_urls.{$name}");
+        $key = "slack-notifier.webhook_urls.{$name}";
+
+        // An empty webhook URL disables sending, but a missing one is most likely a typo.
+        if (! config()->has($key)) {
+            throw WebhookUrlDoesNotExist::make($name);
+        }
+
+        $url = config($key);
 
         if (! $url) {
             return null;
