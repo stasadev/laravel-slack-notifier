@@ -8,6 +8,6 @@ class WebhookUrlNotValid extends RuntimeException implements SlackNotifierExcept
 {
     public static function make(string $name, string $url): self
     {
-        return new self("The name `{$name}` webhook contains an invalid url `{$url}`. Make sure you specify a valid URL in the `webhook_urls.{$name}` key of the slack-notifier.php config file.");
+        return new self("The `{$name}` webhook has an invalid URL `{$url}`. Make sure you specify a valid URL in the `webhook_urls.{$name}` key of the slack-notifier.php config file.");
     }
 }

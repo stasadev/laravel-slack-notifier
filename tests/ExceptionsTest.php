@@ -15,14 +15,15 @@ class ExceptionsTest extends TestCase
     {
         $exception = FormatterClassDoesNotExist::make('App\\Formatters\\Missing');
 
-        $this->assertStringContainsString("'App\\Formatters\\Missing' does not exist", $exception->getMessage());
+        $this->assertStringContainsString('`App\\Formatters\\Missing` does not exist', $exception->getMessage());
+        $this->assertStringContainsString('specify a valid class name in the `formatter` key', $exception->getMessage());
     }
 
     public function test_it_accepts_no_class_in_formatter_class_does_not_exist(): void
     {
         $exception = FormatterClassDoesNotExist::make(null);
 
-        $this->assertStringContainsString("formatter class '' does not exist", $exception->getMessage());
+        $this->assertStringContainsString('formatter class `` does not exist', $exception->getMessage());
     }
 
     public function test_it_names_the_config_key_in_webhook_url_does_not_exist(): void
@@ -37,18 +38,19 @@ class ExceptionsTest extends TestCase
     {
         $exception = WebhookUrlNotValid::make('testing', 'not-an-url');
 
-        $this->assertStringContainsString('`testing` webhook contains an invalid url `not-an-url`', $exception->getMessage());
+        $this->assertStringContainsString('The `testing` webhook has an invalid URL `not-an-url`.', $exception->getMessage());
         $this->assertStringContainsString('`webhook_urls.testing`', $exception->getMessage());
     }
 
     public function test_it_wraps_the_original_exception_in_webhook_send_fail(): void
     {
-        $previous = new LogicException('root-cause');
+        $original = new RuntimeException('Slack is down', 5, new LogicException('root-cause'));
 
-        $exception = WebhookSendFail::make(new RuntimeException('Slack is down', 5, $previous));
+        $exception = WebhookSendFail::make($original);
 
         $this->assertSame('RuntimeException: Slack is down', $exception->getMessage());
         $this->assertSame(1, $exception->getCode());
-        $this->assertSame($previous, $exception->getPrevious());
+        // Keep the original exception, so the log shows its class, trace and previous exceptions.
+        $this->assertSame($original, $exception->getPrevious());
     }
 }
