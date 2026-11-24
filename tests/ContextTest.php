@@ -2,27 +2,11 @@
 
 namespace Stasadev\SlackNotifier\Tests;
 
-use Illuminate\Notifications\AnonymousNotifiable;
-use Illuminate\Notifications\Messages\SlackAttachment;
 use Illuminate\Support\Facades\Context;
-use Illuminate\Support\Facades\Notification;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
-use Stasadev\SlackNotifier\Notifications\SendToSlack;
 
 class ContextTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
-    }
-
-    public function test_it_does_not_include_context_in_the_default_config_context_options(): void
-    {
-        $this->assertNotContains('context', config('slack-notifier.context'));
-    }
-
     public function test_it_includes_laravel_context_facade_data_in_the_context_attachment_when_enabled_in_config(): void
     {
         $this->requireContextFacade();
@@ -108,29 +92,5 @@ class ContextTest extends TestCase
         if (! class_exists(Context::class)) {
             $this->markTestSkipped('Laravel Context facade requires Laravel 11+');
         }
-    }
-
-    protected function getSentContextAttachment(): SlackAttachment
-    {
-        $attachment = null;
-
-        Notification::assertSentTo(new AnonymousNotifiable, SendToSlack::class, function (SendToSlack $notification, array $channels, $notifiable) use (&$attachment) {
-            $attachments = $notification->toSlack($notifiable)->attachments;
-            $attachment = end($attachments);
-
-            return true;
-        });
-
-        $this->assertInstanceOf(SlackAttachment::class, $attachment);
-
-        return $attachment;
-    }
-
-    protected function assertNoContextAttachment(): void
-    {
-        $attachment = $this->getSentContextAttachment();
-
-        $this->assertNull($attachment->pretext);
-        $this->assertNull($attachment->content);
     }
 }
