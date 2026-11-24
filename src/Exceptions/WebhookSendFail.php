@@ -9,6 +9,6 @@ class WebhookSendFail extends RuntimeException implements SlackNotifierException
 {
     public static function make(Throwable $exception): self
     {
-        return new self(get_class($exception).': '.$exception->getMessage(), 1, $exception->getPrevious());
+        return new self(get_class($exception).': '.$exception->getMessage(), 1, $exception);
     }
 }
