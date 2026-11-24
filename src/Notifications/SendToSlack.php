@@ -27,6 +27,8 @@ class SendToSlack extends Notification
     protected $variable;
 
     /**
+     * A webhook URL, or the name of a webhook URL in config.
+     *
      * @var string
      */
     protected $to;
@@ -69,7 +71,7 @@ class SendToSlack extends Notification
 
     public function to(string $to): self
     {
-        $this->to = Config::getWebhookUrl($to);
+        $this->to = $to;
 
         return $this;
     }
@@ -110,12 +112,15 @@ class SendToSlack extends Notification
             $this->variable = $message;
         }
 
-        try {
-            if ($this->exception instanceof WebhookSendFail) {
-                return;
-            }
+        if ($this->exception instanceof WebhookSendFail) {
+            return;
+        }
 
-            NotificationFacade::route('slack', $this->to)->notify($this);
+        // Resolve only the webhook URL that is used, so an invalid one does not affect the others.
+        $url = Config::getWebhookUrl($this->to);
+
+        try {
+            NotificationFacade::route('slack', $url)->notify($this);
         } catch (Throwable $e) {
             report(WebhookSendFail::make($e));
         }
