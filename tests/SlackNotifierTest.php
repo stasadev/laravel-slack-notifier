@@ -242,7 +242,7 @@ class SlackNotifierTest extends TestCase
         $message = $this->getSentMessage(1);
 
         $this->assertSame('success', $message->level);
-        $this->assertCount(2, $message->attachments);
+        $this->assertCount(1, $message->attachments);
         $this->assertSame('```test-data```', $message->attachments[0]->content);
     }
 
@@ -253,7 +253,7 @@ class SlackNotifierTest extends TestCase
 
         $message = $this->getSentMessage(1);
 
-        $this->assertCount(2, $message->attachments);
+        $this->assertCount(1, $message->attachments);
         $this->assertSame('```second-value```', $message->attachments[0]->content);
     }
 
