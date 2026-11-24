@@ -192,6 +192,10 @@ SlackNotifier::cacheSeconds(60)->send(new \RuntimeException('Test exception'));
 composer test
 ```
 
+## Changelog
+
+See [GitHub Releases](https://github.com/stasadev/laravel-slack-notifier/releases) for what has changed in each version.
+
 ## Credits
 
 Inspired by [spatie/laravel-slack-alerts](https://github.com/spatie/laravel-slack-alerts).
