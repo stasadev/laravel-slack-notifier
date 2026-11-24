@@ -2,18 +2,32 @@
 
 namespace Stasadev\SlackNotifier\Tests;
 
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Notifications\ChannelManager;
+use Illuminate\Notifications\Messages\SlackAttachment;
+use Illuminate\Notifications\Messages\SlackMessage;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Stasadev\SlackNotifier\Notifications\SendToSlack;
 use Stasadev\SlackNotifier\SlackNotifierServiceProvider;
+use Stasadev\SlackNotifier\Tests\Support\FakeSlackChannel;
 
 class TestCase extends Orchestra
 {
+    /**
+     * @var FakeSlackChannel
+     */
+    protected $slack;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Notification::fake();
+        $slack = $this->slack = new FakeSlackChannel;
+
+        $this->app->make(ChannelManager::class)->extend('slack', function () use ($slack) {
+            return $slack;
+        });
+
+        config()->set('app.name', 'Testing App');
+        config()->set('slack-notifier.webhook_urls.default', 'https://default-domain.com');
     }
 
     protected function getPackageProviders($app): array
@@ -23,15 +37,40 @@ class TestCase extends Orchestra
         ];
     }
 
-    protected function assertSlackNotificationsSent(int $count): void
+    protected function assertSlackMessagesSent(int $count): void
     {
-        $fake = Notification::getFacadeRoot();
+        $this->assertCount($count, $this->slack->sent);
+    }
 
-        // Laravel 8 renamed assertTimesSent($count, $class) to assertSentTimes($class, $count).
-        if (method_exists($fake, 'assertSentTimes')) {
-            $fake->assertSentTimes(SendToSlack::class, $count);
-        } else {
-            $fake->assertTimesSent($count, SendToSlack::class);
-        }
+    protected function getSentMessage(int $index = 0): SlackMessage
+    {
+        $this->assertArrayHasKey($index, $this->slack->sent, "Slack message #{$index} was not sent.");
+
+        return $this->slack->sent[$index]['message'];
+    }
+
+    protected function getSentUrl(int $index = 0): ?string
+    {
+        $this->assertArrayHasKey($index, $this->slack->sent, "Slack message #{$index} was not sent.");
+
+        return $this->slack->sent[$index]['url'];
+    }
+
+    /**
+     * The context attachment is always the last one, and it is empty when there is no context.
+     */
+    protected function getSentContextAttachment(int $index = 0): SlackAttachment
+    {
+        $attachments = $this->getSentMessage($index)->attachments;
+
+        return end($attachments);
+    }
+
+    protected function assertNoContextAttachment(int $index = 0): void
+    {
+        $attachment = $this->getSentContextAttachment($index);
+
+        $this->assertNull($attachment->pretext);
+        $this->assertNull($attachment->content);
     }
 }
