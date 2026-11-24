@@ -68,16 +68,15 @@ class SlackNotifierFormatter
             $slackMessage = $this->formatVariable($notification->getVariable());
         }
 
-        $slackMessage->attachment(function (SlackAttachment $attachment) {
-            if (! $context = $this->getContext()) {
-                return;
-            }
-
-            $attachment->pretext('Context')
-                ->content('```'.$context.'```')
-                ->color('#3498DB')
-                ->markdown(['text']);
-        });
+        // Slack shows an empty attachment as a colored bar, so add it only with context.
+        if ($context = $this->getContext()) {
+            $slackMessage->attachment(function (SlackAttachment $attachment) use ($context) {
+                $attachment->pretext('Context')
+                    ->content('```'.$context.'```')
+                    ->color('#3498DB')
+                    ->markdown(['text']);
+            });
+        }
 
         return $slackMessage;
     }

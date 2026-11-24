@@ -77,20 +77,23 @@ class TestCase extends Orchestra
     }
 
     /**
-     * The context attachment is always the last one, and it is empty when there is no context.
+     * The context attachment is always the last one.
      */
     protected function getSentContextAttachment(int $index = 0): SlackAttachment
     {
         $attachments = $this->getSentMessage($index)->attachments;
+        $attachment = end($attachments);
 
-        return end($attachments);
+        $this->assertSame('Context', $attachment->pretext, "Slack message #{$index} has no context attachment.");
+
+        return $attachment;
     }
 
     protected function assertNoContextAttachment(int $index = 0): void
     {
-        $attachment = $this->getSentContextAttachment($index);
-
-        $this->assertNull($attachment->pretext);
-        $this->assertNull($attachment->content);
+        foreach ($this->getSentMessage($index)->attachments as $attachment) {
+            $this->assertNotSame('Context', $attachment->pretext, "Slack message #{$index} has a context attachment.");
+            $this->assertNotNull($attachment->content, "Slack message #{$index} has an empty attachment.");
+        }
     }
 }

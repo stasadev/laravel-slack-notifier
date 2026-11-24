@@ -36,7 +36,7 @@ class FormatterTest extends TestCase
         $message = $this->getSentMessage();
 
         $this->assertSame('success', $message->level);
-        $this->assertCount(2, $message->attachments);
+        $this->assertCount(1, $message->attachments);
 
         $attachment = $message->attachments[0];
 
@@ -84,7 +84,7 @@ class FormatterTest extends TestCase
         $message = $this->getSentMessage();
 
         $this->assertSame('error', $message->level);
-        $this->assertCount(3, $message->attachments);
+        $this->assertCount(2, $message->attachments);
 
         $expected = 'RuntimeException: test-exception in '.__FILE__.':'.$line;
 
@@ -105,7 +105,7 @@ class FormatterTest extends TestCase
 
         $attachments = $this->getSentMessage()->attachments;
 
-        $this->assertCount(5, $attachments);
+        $this->assertCount(4, $attachments);
 
         $this->assertSame('Caught an exception from console', $attachments[0]->pretext);
         $this->assertStringContainsString('RuntimeException: outer-exception', $attachments[0]->content);
