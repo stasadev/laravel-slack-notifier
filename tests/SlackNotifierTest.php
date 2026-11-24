@@ -57,6 +57,18 @@ class SlackNotifierTest extends TestCase
         $this->assertSame('https://custom-domain.com', $this->getSentUrl());
     }
 
+    public function test_it_sends_to_another_webhook_url_when_the_default_webhook_url_is_invalid(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', 'not-an-url');
+        config()->set('slack-notifier.webhook_urls.testing', 'https://testing-domain.com');
+
+        SlackNotifier::to('https://custom-domain.com')->send('first-value');
+        SlackNotifier::to('testing')->send('second-value');
+
+        $this->assertSame('https://custom-domain.com', $this->getSentUrl(0));
+        $this->assertSame('https://testing-domain.com', $this->getSentUrl(1));
+    }
+
     public function test_it_passes_no_webhook_url_when_the_webhook_url_is_empty(): void
     {
         config()->set('slack-notifier.webhook_urls.default', '');
