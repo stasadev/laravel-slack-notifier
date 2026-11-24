@@ -7,6 +7,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
 use Stasadev\SlackNotifier\Tests\Support\CustomFormatter;
+use Stasadev\SlackNotifier\Tests\Support\StringableValue;
 use Stasadev\SlackNotifier\Tests\Support\UnserializableValue;
 use stdClass;
 
@@ -164,5 +165,78 @@ class FormatterTest extends TestCase
     protected function createException(): RuntimeException
     {
         return new RuntimeException('test-exception');
+    }
+
+    public function test_it_formats_a_chain_of_previous_exceptions(): void
+    {
+        $first = new LogicException('first-exception');
+        $second = new RuntimeException('second-exception', 0, $first);
+
+        SlackNotifier::send(new RuntimeException('third-exception', 0, $second));
+
+        $attachments = $this->getSentMessage()->attachments;
+
+        $this->assertSame('Caught an exception from console', $attachments[0]->pretext);
+        $this->assertStringContainsString('RuntimeException: third-exception', $attachments[0]->content);
+        $this->assertSame('Previous exception', $attachments[2]->pretext);
+        $this->assertStringContainsString('RuntimeException: second-exception', $attachments[2]->content);
+        $this->assertSame('Previous exception', $attachments[4]->pretext);
+        $this->assertStringContainsString('LogicException: first-exception', $attachments[4]->content);
+        $this->assertSame('Stack trace', $attachments[5]->pretext);
+    }
+
+    public function test_it_formats_an_object_with_to_string(): void
+    {
+        SlackNotifier::send(new StringableValue);
+
+        $content = $this->getSentMessage()->attachments[0]->content;
+
+        $this->assertStringContainsString(StringableValue::class, $content);
+        $this->assertStringContainsString('stringable-value', $content);
+    }
+
+    public function test_it_formats_a_closure(): void
+    {
+        SlackNotifier::send(function () {
+            return 'test-data';
+        });
+
+        $this->assertStringContainsString('Closure', $this->getSentMessage()->attachments[0]->content);
+    }
+
+    public function test_it_formats_a_resource(): void
+    {
+        $resource = fopen('php://memory', 'r');
+
+        SlackNotifier::send($resource);
+
+        fclose($resource);
+
+        $this->assertStringContainsString('resource', $this->getSentMessage()->attachments[0]->content);
+    }
+
+    public function test_it_stops_normalizing_a_deeply_nested_array(): void
+    {
+        $value = 'too-deep';
+
+        for ($depth = 0; $depth < 20; $depth++) {
+            $value = ['level' => $value];
+        }
+
+        SlackNotifier::send($value);
+
+        $content = $this->getSentMessage()->attachments[0]->content;
+
+        $this->assertStringContainsString('levels deep, aborting normalization', $content);
+        $this->assertStringNotContainsString('too-deep', $content);
+    }
+
+    public function test_it_does_not_include_request_data_in_the_console(): void
+    {
+        config()->set('slack-notifier.context', ['get', 'post', 'request', 'headers', 'files', 'cookie', 'session', 'server']);
+
+        SlackNotifier::send('test-data');
+
+        $this->assertNoContextAttachment();
     }
 }

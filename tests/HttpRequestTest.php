@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Session\NullSessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\Context;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
@@ -152,5 +153,49 @@ class HttpRequestTest extends TestCase
 
         $_ENV['APP_RUNNING_IN_CONSOLE'] = $_SERVER['APP_RUNNING_IN_CONSOLE'] = $value;
         putenv("APP_RUNNING_IN_CONSOLE={$value}");
+    }
+
+    public function test_it_uses_dont_flash_keys_from_config(): void
+    {
+        config()->set('slack-notifier.context', ['post']);
+        config()->set('slack-notifier.dont_flash', ['name']);
+
+        SlackNotifier::send('test-data');
+
+        $content = $this->getSentContextAttachment()->content;
+
+        $this->assertStringNotContainsString('John', $content);
+        $this->assertStringContainsString('[password] => secret-pass', $content);
+    }
+
+    public function test_it_includes_the_context_items_in_the_order_from_config(): void
+    {
+        config()->set('slack-notifier.context', ['session', 'get']);
+
+        SlackNotifier::send('test-data');
+
+        $content = $this->getSentContextAttachment()->content;
+
+        $this->assertStringStartsWith('```$_SESSION = ', $content);
+        $this->assertStringContainsString("\n\$_GET = ", $content);
+        $this->assertStringNotContainsString('$_POST = ', $content);
+    }
+
+    public function test_it_includes_laravel_context_facade_data_with_request_data(): void
+    {
+        if (! class_exists(Context::class)) {
+            $this->markTestSkipped('Laravel Context facade requires Laravel 11+');
+        }
+
+        config()->set('slack-notifier.context', ['get', 'context']);
+
+        Context::add('trace_id', 'abc-123');
+
+        SlackNotifier::send('test-data');
+
+        $content = $this->getSentContextAttachment()->content;
+
+        $this->assertStringContainsString('[page] => 2', $content);
+        $this->assertStringContainsString('[trace_id] => abc-123', $content);
     }
 }
