@@ -3,7 +3,9 @@
 namespace Stasadev\SlackNotifier\Tests;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
-use Mockery;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
@@ -11,6 +13,7 @@ use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\Facades\SlackNotifier;
 use stdClass;
+use Throwable;
 
 class SlackNotifierTest extends TestCase
 {
@@ -35,9 +38,23 @@ class SlackNotifierTest extends TestCase
         }
     }
 
-    public function test_it_does_not_send_its_own_webhook_send_fail_exception(): void
+    public static function packageExceptionProvider(): array
     {
-        SlackNotifier::send(WebhookSendFail::make(new RuntimeException('webhook is failed')));
+        return [
+            'FormatterClassDoesNotExist' => [FormatterClassDoesNotExist::make('App\\Formatters\\Missing')],
+            'WebhookSendFail' => [WebhookSendFail::make(new RuntimeException('webhook is failed'))],
+            'WebhookUrlDoesNotExist' => [WebhookUrlDoesNotExist::make('testing')],
+            'WebhookUrlNotValid' => [WebhookUrlNotValid::make('testing', 'not-an-url')],
+        ];
+    }
+
+    /**
+     * @dataProvider packageExceptionProvider
+     */
+    #[DataProvider('packageExceptionProvider')]
+    public function test_it_does_not_send_its_own_exceptions(RuntimeException $exception): void
+    {
+        SlackNotifier::send($exception);
 
         $this->assertSlackMessagesSent(0);
     }
@@ -127,20 +144,29 @@ class SlackNotifierTest extends TestCase
 
     public function test_it_reports_a_webhook_send_fail_exception_when_sending_fails(): void
     {
-        $reported = null;
-
-        $handler = Mockery::mock(ExceptionHandler::class);
-        $handler->shouldReceive('report')->andReturnUsing(function ($exception) use (&$reported) {
-            $reported = $exception;
-        });
-        $this->app->instance(ExceptionHandler::class, $handler);
+        $this->recordReportedExceptions();
 
         $this->slack->failWith = new RuntimeException('Slack is down');
 
         SlackNotifier::send('test-data');
 
-        $this->assertInstanceOf(WebhookSendFail::class, $reported);
-        $this->assertSame('RuntimeException: Slack is down', $reported->getMessage());
+        $this->assertCount(1, $this->reported);
+        $this->assertInstanceOf(WebhookSendFail::class, $this->reported[0]);
+        $this->assertSame('RuntimeException: Slack is down', $this->reported[0]->getMessage());
+    }
+
+    public function test_it_reports_a_webhook_send_fail_exception_when_the_cache_fails(): void
+    {
+        $this->recordReportedExceptions();
+
+        Cache::shouldReceive('add')->andThrow(new RuntimeException('Connection refused'));
+
+        SlackNotifier::cacheSeconds(60)->send(new RuntimeException('test-exception'));
+
+        $this->assertSlackMessagesSent(0);
+        $this->assertCount(1, $this->reported);
+        $this->assertInstanceOf(WebhookSendFail::class, $this->reported[0]);
+        $this->assertSame('RuntimeException: Connection refused', $this->reported[0]->getMessage());
     }
 
     public function test_it_suppresses_the_same_exception_for_the_cache_seconds(): void
@@ -182,9 +208,7 @@ class SlackNotifierTest extends TestCase
 
     public function test_it_does_not_suppress_an_exception_that_failed_to_send(): void
     {
-        $handler = Mockery::mock(ExceptionHandler::class);
-        $handler->shouldReceive('report')->once()->with(Mockery::type(WebhookSendFail::class));
-        $this->app->instance(ExceptionHandler::class, $handler);
+        $this->recordReportedExceptions();
 
         $exception = new RuntimeException('test-exception');
 
@@ -196,6 +220,8 @@ class SlackNotifierTest extends TestCase
         SlackNotifier::cacheSeconds(60)->send($exception);
 
         $this->assertSlackMessagesSent(1);
+        $this->assertCount(1, $this->reported);
+        $this->assertInstanceOf(WebhookSendFail::class, $this->reported[0]);
     }
 
     public function test_it_does_not_suppress_values_with_cache_seconds(): void
@@ -250,46 +276,72 @@ class SlackNotifierTest extends TestCase
         $this->assertSlackMessagesSent(0);
     }
 
-    public function test_it_will_throw_an_exception_for_a_non_existing_formatter_class(): void
+    public static function configErrorProvider(): array
     {
-        config()->set('slack-notifier.formatter', 'non-existing-job');
+        return [
+            'unknown webhook name' => [[], 'non-existing', WebhookUrlDoesNotExist::class],
+            'invalid webhook URL' => [['webhook_urls.default' => 'not-an-url'], 'default', WebhookUrlNotValid::class],
+            'non-existing formatter class' => [['formatter' => 'non-existing-job'], 'default', FormatterClassDoesNotExist::class],
+            'empty formatter class' => [['formatter' => ''], 'default', FormatterClassDoesNotExist::class],
+            'missing formatter class' => [['formatter' => null], 'default', FormatterClassDoesNotExist::class],
+        ];
+    }
 
-        $this->expectException(FormatterClassDoesNotExist::class);
+    /**
+     * @dataProvider configErrorProvider
+     */
+    #[DataProvider('configErrorProvider')]
+    public function test_it_reports_a_config_error_instead_of_throwing(array $config, string $to, string $expected): void
+    {
+        $this->recordReportedExceptions();
+
+        foreach ($config as $key => $value) {
+            config()->set("slack-notifier.{$key}", $value);
+        }
+
+        SlackNotifier::to($to)->send(new RuntimeException('test-exception'));
+
+        $this->assertSlackMessagesSent(0);
+        $this->assertCount(1, $this->reported);
+        $this->assertInstanceOf($expected, $this->reported[0]);
+    }
+
+    public function test_it_sends_with_a_null_username_and_emoji_in_config(): void
+    {
+        config()->set('slack-notifier.username', null);
+        config()->set('slack-notifier.emoji', null);
 
         SlackNotifier::send('test-data');
+
+        $this->assertSlackMessagesSent(1);
     }
 
-    public function test_it_will_throw_an_exception_for_an_unknown_webhook_name(): void
+    public function test_it_lets_laravel_log_the_exception_when_the_config_is_invalid(): void
     {
-        $this->expectException(WebhookUrlDoesNotExist::class);
+        $handler = $this->app->make(ExceptionHandler::class);
 
-        SlackNotifier::to('non-existing')->send('test-data');
-    }
+        if (! method_exists($handler, 'reportable')) {
+            $this->markTestSkipped('Report callbacks require Laravel 8+');
+        }
 
-    public function test_it_will_throw_an_exception_for_an_invalid_webhook_url(): void
-    {
         config()->set('slack-notifier.webhook_urls.default', 'not-an-url');
 
-        $this->expectException(WebhookUrlNotValid::class);
+        $logged = [];
+        Log::listen(function ($event) use (&$logged) {
+            // Laravel 5.7 passes the message, and later versions pass a MessageLogged event.
+            $logged[] = is_object($event) ? $event->message : $event;
+        });
 
-        SlackNotifier::send('test-data');
-    }
+        $handler->reportable(function (Throwable $e) {
+            SlackNotifier::send($e);
+        });
 
-    public function test_it_will_throw_an_exception_for_an_invalid_formatter_class(): void
-    {
-        config()->set('slack-notifier.formatter', '');
+        $handler->report(new RuntimeException('test-exception'));
 
-        $this->expectException(FormatterClassDoesNotExist::class);
-
-        SlackNotifier::send('test-data');
-    }
-
-    public function test_it_will_throw_an_exception_for_a_missing_formatter_class(): void
-    {
-        config()->set('slack-notifier.formatter', null);
-
-        $this->expectException(FormatterClassDoesNotExist::class);
-
-        SlackNotifier::send('test-data');
+        // The config error is reported from the callback, before Laravel logs the original exception.
+        $this->assertSlackMessagesSent(0);
+        $this->assertCount(2, $logged);
+        $this->assertStringContainsString('`not-an-url`', $logged[0]);
+        $this->assertSame('test-exception', $logged[1]);
     }
 }

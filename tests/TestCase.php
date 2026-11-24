@@ -2,9 +2,11 @@
 
 namespace Stasadev\SlackNotifier\Tests;
 
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Notifications\Messages\SlackAttachment;
 use Illuminate\Notifications\Messages\SlackMessage;
+use Mockery;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Stasadev\SlackNotifier\SlackNotifierServiceProvider;
 use Stasadev\SlackNotifier\Tests\Support\FakeSlackChannel;
@@ -15,6 +17,11 @@ class TestCase extends Orchestra
      * @var FakeSlackChannel
      */
     protected $slack;
+
+    /**
+     * @var \Throwable[]
+     */
+    protected $reported = [];
 
     protected function setUp(): void
     {
@@ -35,6 +42,19 @@ class TestCase extends Orchestra
         return [
             SlackNotifierServiceProvider::class,
         ];
+    }
+
+    /**
+     * Record the exceptions passed to report() in $this->reported, instead of logging them.
+     */
+    protected function recordReportedExceptions(): void
+    {
+        $handler = Mockery::mock(ExceptionHandler::class);
+        $handler->shouldReceive('report')->andReturnUsing(function ($exception) {
+            $this->reported[] = $exception;
+        });
+
+        $this->app->instance(ExceptionHandler::class, $handler);
     }
 
     protected function assertSlackMessagesSent(int $count): void

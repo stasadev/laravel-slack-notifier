@@ -46,6 +46,8 @@ php artisan vendor:publish --tag="slack-notifier"
 
 To send a message to Slack, simply call `SlackNotifier::send()`.
 
+`SlackNotifier::send()` never throws, as it usually runs while Laravel reports an exception. If the config is invalid or Slack cannot be reached, the error is passed to Laravel's `report()` and written to your log.
+
 ## Report Exception
 
 ```php
@@ -123,7 +125,7 @@ use Stasadev\SlackNotifier\Facades\SlackNotifier;
 SlackNotifier::to('testing')->send('Test message');
 ```
 
-A name that is missing from `webhook_urls` throws `WebhookUrlDoesNotExist`, while a name with an empty URL disables sending.
+A name that is missing from `webhook_urls` reports `WebhookUrlDoesNotExist`, while a name with an empty URL disables sending.
 
 ### Using a custom webhooks
 
