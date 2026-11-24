@@ -6,6 +6,7 @@ use LogicException;
 use RuntimeException;
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookSendFail;
+use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 
 class ExceptionsTest extends TestCase
@@ -22,6 +23,14 @@ class ExceptionsTest extends TestCase
         $exception = FormatterClassDoesNotExist::make(null);
 
         $this->assertStringContainsString("formatter class '' does not exist", $exception->getMessage());
+    }
+
+    public function test_it_names_the_config_key_in_webhook_url_does_not_exist(): void
+    {
+        $exception = WebhookUrlDoesNotExist::make('testing');
+
+        $this->assertStringContainsString('`testing` webhook does not exist', $exception->getMessage());
+        $this->assertStringContainsString('`webhook_urls.testing`', $exception->getMessage());
     }
 
     public function test_it_names_the_config_key_and_url_in_webhook_url_not_valid(): void

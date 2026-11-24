@@ -123,6 +123,8 @@ use Stasadev\SlackNotifier\Facades\SlackNotifier;
 SlackNotifier::to('testing')->send('Test message');
 ```
 
+A name that is missing from `webhook_urls` throws `WebhookUrlDoesNotExist`, while a name with an empty URL disables sending.
+
 ### Using a custom webhooks
 
 The `to` function also supports custom webhook URLs.

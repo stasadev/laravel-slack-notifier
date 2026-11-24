@@ -5,6 +5,7 @@ namespace Stasadev\SlackNotifier\Tests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Stasadev\SlackNotifier\Config;
 use Stasadev\SlackNotifier\Exceptions\FormatterClassDoesNotExist;
+use Stasadev\SlackNotifier\Exceptions\WebhookUrlDoesNotExist;
 use Stasadev\SlackNotifier\Exceptions\WebhookUrlNotValid;
 use Stasadev\SlackNotifier\SlackNotifierFormatter;
 use Stasadev\SlackNotifier\Tests\Support\CustomFormatter;
@@ -28,9 +29,18 @@ class ConfigTest extends TestCase
         $this->assertSame($result, Config::getWebhookUrl($name));
     }
 
-    public function test_it_cannot_get_a_webhook_url_for_an_unknown_config_name(): void
+    public function test_it_throws_an_exception_for_an_unknown_webhook_name(): void
     {
-        $this->assertNull(Config::getWebhookUrl('non-existing'));
+        $this->expectException(WebhookUrlDoesNotExist::class);
+
+        Config::getWebhookUrl('non-existing');
+    }
+
+    public function test_it_cannot_get_a_webhook_url_for_a_null_config_value(): void
+    {
+        config()->set('slack-notifier.webhook_urls.default', null);
+
+        $this->assertNull(Config::getWebhookUrl('default'));
     }
 
     public function test_it_cannot_get_a_webhook_url_for_an_empty_config_value(): void
